@@ -1,4 +1,4 @@
-# ⛏️ GSMM (Game & Server Minecraft Manager)
+# ⛏️ GSMM
 
 **GSMM** è un gestore di server Minecraft locale **ultra-leggero**, compatto e multipiattaforma (Linux, Windows, macOS) scritto in **Rust**.
 
