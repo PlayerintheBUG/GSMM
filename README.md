@@ -29,10 +29,9 @@
 
 ## 📦 Installazione / Compilazione
 
-Il binario di release è già compilato in `target/release/gsmm`:
 
 ```bash
-# Per ricompilare in qualsiasi momento
+# Per compilare 
 cargo build --release
 
 # Per renderlo accessibile ovunque (su Linux)
@@ -44,7 +43,7 @@ sudo cp target/release/gsmm /usr/local/bin/
 ## 🛠️ Guida all'Uso
 
 ### 1. Inizializzazione di un nuovo server
-Spostati nella cartella in cui desideri creare il server e lancia il wizard interattivo:
+Spostati nella cartella in cui desideri creare il server e lancia il wizard interattivo (il binario deve essere presente nella cartella):
 ```bash
 ./gsmm init
 ```
