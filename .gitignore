@@ -1,0 +1,21 @@
+/target
+*.tar.gz
+*.zip
+*.jar
+*.log
+
+# Minecraft runtime data (in case run locally in repo)
+/world*
+/mods/
+/backups/
+/logs/
+/crash-reports/
+.gsmm.json
+server.properties
+eula.txt
+usercache.json
+whitelist.json
+ops.json
+banned-*.json
+run.bat
+run.sh
