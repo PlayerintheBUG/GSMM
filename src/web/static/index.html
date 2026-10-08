@@ -1,553 +1,657 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GSMM - Minecraft Server Manager</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --primary: #10b981;
-      --primary-hover: #059669;
-      --danger: #ef4444;
-      --danger-hover: #dc2626;
-      --accent: #38bdf8;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --terminal-bg: #020617;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-    header { background: var(--card-bg); border-bottom: 1px solid var(--card-border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    .logo { display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 700; color: var(--primary); }
-    .nav-tabs { display: flex; gap: 0.5rem; }
-    .tab-btn { background: transparent; border: 1px solid transparent; color: var(--text-muted); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-    .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
-    .tab-btn.active { background: var(--primary); color: #022c22; border-color: var(--primary); }
-    main { flex: 1; padding: 2rem; max-width: 1200px; width: 100%; margin: 0 auto; }
-    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-    .status-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
-    .badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 600; font-size: 0.875rem; }
-    .badge.online { background: rgba(16,185,129,0.2); color: #34d399; }
-    .badge.offline { background: rgba(239,68,68,0.2); color: #f87171; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; }
-    .btn-primary { background: var(--primary); color: #022c22; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-danger:hover { background: var(--danger-hover); }
-    .btn-secondary { background: var(--card-border); color: var(--text); }
-    .btn-secondary:hover { background: #475569; }
-    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
-    .terminal { background: var(--terminal-bg); border: 1px solid var(--card-border); border-radius: 8px; height: 380px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; line-height: 1.4; color: #cbd5e1; }
-    .terminal-line { margin-bottom: 0.25rem; word-break: break-all; }
-    .cmd-bar { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
-    .input { flex: 1; background: var(--terminal-bg); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.6rem 1rem; color: var(--text); font-size: 0.95rem; }
-    .input:focus { outline: none; border-color: var(--accent); }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
-    .mod-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--card-border); margin-bottom: 0.5rem; }
-    .mod-icon { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: #334155; margin-right: 0.75rem; }
-    .ip-box { background: rgba(0,0,0,0.3); border: 1px solid var(--accent); border-radius: 8px; padding: 1rem; text-align: center; margin-top: 1rem; }
-    .ip-text { font-size: 1.4rem; font-weight: 700; color: var(--accent); user-select: all; font-family: monospace; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSMM — Minecraft Server Manager</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d2e; --surface2: #252840;
+    --border: #2d3154; --accent: #6c63ff; --accent2: #00d4aa;
+    --red: #ff4757; --green: #2ed573; --yellow: #ffa502;
+    --text: #e0e0e0; --muted: #8892b0; --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); height: 100vh; overflow: hidden; }
+
+  /* ── Login Screen ── */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; background: radial-gradient(ellipse at center, #1a1d2e 0%, #0f1117 70%);
+  }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 40px; width: 380px; text-align: center;
+  }
+  .login-box h1 { font-size: 1.8em; margin-bottom: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .login-box p { color: var(--muted); margin-bottom: 28px; font-size: 0.9em; }
+  .login-box input {
+    width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 1em; margin-bottom: 16px; font-family: monospace;
+  }
+  .login-box input:focus { outline: none; border-color: var(--accent); }
+  .login-btn {
+    width: 100%; padding: 12px; background: var(--accent); border: none;
+    border-radius: 8px; color: white; font-size: 1em; cursor: pointer; font-weight: 600;
+    transition: opacity .2s;
+  }
+  .login-btn:hover { opacity: 0.85; }
+  .login-error { color: var(--red); font-size: 0.85em; margin-top: 12px; display: none; }
+
+  /* ── Main Layout ── */
+  #app { display: none; height: 100vh; flex-direction: column; }
+  .topbar {
+    display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 1.1em; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-right: auto; }
+  .topbar-badge { font-size: 0.75em; background: var(--surface2); border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; color: var(--muted); }
+  .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em; }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto;
+  }
+  .sidebar-title { padding: 14px 16px 8px; font-size: 0.7em; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .server-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+    cursor: pointer; border-left: 3px solid transparent; transition: all .15s;
+  }
+  .server-item:hover { background: var(--surface2); }
+  .server-item.active { background: var(--surface2); border-left-color: var(--accent); }
+  .server-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--muted); }
+  .server-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .server-dot.offline { background: var(--red); }
+  .server-info { flex: 1; min-width: 0; }
+  .server-name { font-size: 0.9em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .server-ver { font-size: 0.7em; color: var(--muted); }
+  .sidebar-add {
+    margin: 10px 12px; padding: 8px; background: none; border: 1px dashed var(--border);
+    border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 0.8em; text-align: center;
+  }
+  .sidebar-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Content Area ── */
+  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { display: flex; gap: 4px; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tab { padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85em; color: var(--muted); border: 1px solid transparent; transition: all .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--surface2); border-color: var(--border); color: var(--text); }
+
+  .tab-content { flex: 1; overflow: hidden; display: none; }
+  .tab-content.active { display: flex; flex-direction: column; }
+
+  /* ── Console Tab ── */
+  .console-layout { display: flex; flex-direction: column; height: 100%; }
+  .server-header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .server-header h2 { font-size: 1em; font-weight: 600; }
+  .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600; }
+  .status-badge.online { background: rgba(46,213,115,.15); color: var(--green); border: 1px solid rgba(46,213,115,.3); }
+  .status-badge.offline { background: rgba(255,71,87,.15); color: var(--red); border: 1px solid rgba(255,71,87,.3); }
+  .btn { padding: 7px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: opacity .2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-muted { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .console-log {
+    flex: 1; overflow-y: auto; padding: 12px 16px; font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 0.78em; line-height: 1.6; background: #0a0c14;
+  }
+  .console-log .line { margin: 1px 0; }
+  .console-log .line.warn { color: var(--yellow); }
+  .console-log .line.error { color: var(--red); }
+  .console-log .line.join { color: var(--accent2); }
+  .console-input-row { display: flex; gap: 8px; padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+  .console-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); font-family: monospace; font-size: 0.9em; }
+  .console-input:focus { outline: none; border-color: var(--accent); }
+
+  /* ── Mods Tab ── */
+  .mods-layout { display: flex; height: 100%; }
+  .mods-search-panel { width: 340px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .mods-search-panel input { margin: 12px; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.85em; }
+  .mods-search-panel input:focus { outline: none; border-color: var(--accent); }
+  .mod-results { flex: 1; overflow-y: auto; }
+  .mod-result-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .mod-result-item:hover { background: var(--surface2); }
+  .mod-result-item .mod-title { font-weight: 600; font-size: 0.9em; }
+  .mod-result-item .mod-desc { font-size: 0.75em; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mod-result-item .mod-dl { font-size: 0.7em; color: var(--accent2); margin-top: 4px; }
+  .mods-installed-panel { flex: 1; display: flex; flex-direction: column; }
+  .mods-installed-panel h3 { padding: 14px 16px 8px; font-size: 0.85em; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .installed-mods-list { flex: 1; overflow-y: auto; padding: 0 12px; }
+  .installed-mod-row { display: flex; align-items: center; gap: 8px; padding: 8px 4px; border-bottom: 1px solid var(--border); }
+  .installed-mod-row .mod-filename { flex: 1; font-size: 0.8em; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mod-remove-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 1em; padding: 2px 6px; }
+
+  /* ── Network Tab ── */
+  .net-layout { padding: 20px; overflow-y: auto; }
+  .net-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .net-card h3 { margin-bottom: 16px; font-size: 0.9em; color: var(--accent); }
+  .net-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .net-row:last-child { border: none; }
+  .net-label { color: var(--muted); font-size: 0.85em; }
+  .net-value { font-family: monospace; font-size: 0.85em; font-weight: 600; }
+  .net-ok { color: var(--green); }
+  .net-fail { color: var(--red); }
+
+  /* ── Settings Tab ── */
+  .settings-layout { padding: 20px; overflow-y: auto; }
+  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .settings-card h3 { margin-bottom: 16px; font-size: 0.9em; color: var(--accent); }
+  .settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .settings-row label { color: var(--muted); font-size: 0.85em; min-width: 130px; }
+  .settings-row input, .settings-row select {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 0.85em;
+  }
+  .settings-row input:focus, .settings-row select:focus { outline: none; border-color: var(--accent); }
+  .settings-row .btn { flex-shrink: 0; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-size: 0.85em; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+  .toast.ok { border-color: var(--green); color: var(--green); }
+  .toast.err { border-color: var(--red); color: var(--red); }
+
+  /* Add server modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 380px; }
+  .modal h3 { margin-bottom: 16px; }
+  .modal input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9em; margin-bottom: 10px; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
 </head>
 <body>
-  <header>
-    <div class="logo">
-      <span>⛏️</span> GSMM <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">Minecraft Manager</span>
-    </div>
-    <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard & Console</button>
-      <button class="tab-btn" onclick="switchTab('mods')">Modrinth Mods</button>
-      <button class="tab-btn" onclick="switchTab('network')">Rete & Amici</button>
-      <button class="tab-btn" onclick="switchTab('settings')">Impostazioni & Aggiorna</button>
-    </div>
-  </header>
 
-  <main>
-    <!-- TAB 1: DASHBOARD -->
-    <div id="tab-dashboard">
-      <div class="card">
-        <div class="status-bar">
-          <div>
-            <h2 id="server-title" style="margin-bottom: 0.25rem;">Server Minecraft</h2>
-            <div id="server-meta" style="color: var(--text-muted); font-size: 0.9rem;">Caricamento configurazione...</div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div id="status-badge" class="badge offline"><span class="dot"></span> Spento</div>
-            <button id="btn-start" class="btn btn-primary" onclick="startServer()">▶ Avvia Server</button>
-            <button id="btn-stop" class="btn btn-danger" onclick="stopServer()" style="display: none;">⏹ Ferma Server</button>
-          </div>
-        </div>
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>⛏ GSMM</h1>
+    <p>Minecraft Server Manager<br>Inserisci il token mostrato nel terminale</p>
+    <input type="password" id="token-input" placeholder="Token di accesso..." autocomplete="off">
+    <button class="login-btn" onclick="doLogin()">Accedi</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <div class="topbar">
+    <h1>⛏ GSMM</h1>
+    <span class="topbar-badge" id="topbar-server-name">Nessun server selezionato</span>
+    <button class="logout-btn" onclick="doLogout()">Disconnetti</button>
+  </div>
+
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-title">Server</div>
+      <div id="server-list"></div>
+      <button class="sidebar-add" onclick="showAddModal()">+ Aggiungi server</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('console')">🖥 Console</div>
+        <div class="tab" onclick="switchTab('mods')">📦 Mod</div>
+        <div class="tab" onclick="switchTab('network')">🌐 Rete</div>
+        <div class="tab" onclick="switchTab('settings')">⚙ Impostazioni</div>
       </div>
 
-      <div class="card">
-        <h3 style="margin-bottom: 0.75rem;">Console Live</h3>
-        <div id="terminal" class="terminal"></div>
-        <form class="cmd-bar" onsubmit="event.preventDefault(); sendCmd();">
-          <input id="cmd-input" type="text" class="input" placeholder="Digita un comando Minecraft (es. help, op tuo_nome, list)..." />
-          <button type="submit" class="btn btn-secondary">Invia</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- TAB 2: MODRINTH MODS -->
-    <div id="tab-mods" style="display: none;">
-      <div class="grid-2">
-        <div class="card">
-          <h3 style="margin-bottom: 0.5rem;">Cerca Mod su Modrinth</h3>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Cerca ed installa mod compatibili con la versione del tuo server con 1 click.</p>
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-            <input id="mod-search-input" type="text" class="input" placeholder="Cerca mod (es. lithium, sodium, chunky)..." onkeydown="if(event.key==='Enter') searchMods();" />
-            <button class="btn btn-primary" onclick="searchMods()">Cerca</button>
-          </div>
-          <div id="search-results"></div>
-        </div>
-
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3>Mod Installate</h3>
-            <button class="btn btn-secondary btn-sm" onclick="loadInstalledMods()">Aggiorna</button>
-          </div>
-          <div id="installed-mods-list">Caricamento mod...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 3: RETE E CONNESSIONE -->
-    <div id="tab-network" style="display: none;">
-      <div class="card">
-        <h3 style="margin-bottom: 0.5rem;">Diagnostica Connettività & Port Forwarding</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Verifica la visibilità del tuo server e scopri l'indirizzo esatto da inviare ai tuoi amici.</p>
-        <button class="btn btn-primary" onclick="runDiagnostics()">🔍 Esegui Test Connettività</button>
-        
-        <div id="diagnostics-result" style="margin-top: 1.5rem; display: none;">
-          <div class="grid-2">
-            <div class="card" style="margin: 0; background: rgba(0,0,0,0.2);">
-              <h4>Indirizzo Rete Locale (LAN)</h4>
-              <p style="color: var(--text-muted); font-size: 0.85rem;">Per chi è connesso al tuo stesso Wi-Fi/router di casa:</p>
-              <div class="ip-box">
-                <div id="lan-ip-display" class="ip-text">-</div>
-              </div>
-            </div>
-
-            <div class="card" style="margin: 0; background: rgba(0,0,0,0.2);">
-              <h4>Indirizzo PUBBLICO (Per Amici Online)</h4>
-              <p style="color: var(--text-muted); font-size: 0.85rem;">Condividi questo indirizzo con chi gioca fuori da casa tua:</p>
-              <div class="ip-box">
-                <div id="wan-ip-display" class="ip-text">-</div>
-              </div>
+      <!-- Console Tab -->
+      <div class="tab-content active" id="tab-console">
+        <div class="console-layout">
+          <div class="server-header">
+            <h2 id="console-server-name">Nessun server</h2>
+            <span class="status-badge offline" id="status-badge">Offline</span>
+            <div style="margin-left:auto; display:flex; gap:8px">
+              <button class="btn btn-green" id="btn-start" onclick="startServer()">▶ Avvia</button>
+              <button class="btn btn-red" id="btn-stop" onclick="stopServer()" disabled>■ Ferma</button>
+              <button class="btn btn-muted" onclick="triggerBackup()">💾 Backup</button>
             </div>
           </div>
-
-          <div style="margin-top: 1.5rem; padding: 1rem; border-radius: 8px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3);">
-            <strong>Stato Raggiungibilità:</strong>
-            <div id="port-status-text" style="margin-top: 0.25rem; font-size: 0.95rem;">-</div>
+          <div class="console-log" id="console-log"></div>
+          <div class="console-input-row">
+            <input class="console-input" id="cmd-input" placeholder="Invia comando al server..." onkeydown="if(event.key==='Enter')sendCmd()">
+            <button class="btn btn-accent" onclick="sendCmd()">Invia</button>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- TAB 4: IMPOSTAZIONI & AGGIORNAMENTO -->
-    <div id="tab-settings" style="display: none;">
-      <div class="card">
-        <h3 style="margin-bottom: 0.5rem;">🔄 Aggiorna Versione Minecraft o Loader</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-          Puoi cambiare versione o tipo di server in qualunque momento: la cartella <strong>world/</strong> con tutte le tue costruzioni e inventari <strong>rimarrà intatta al 100%</strong>.
-        </p>
-        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--card-border); max-width: 600px; display: flex; flex-direction: column; gap: 1rem;">
-          <div>
-            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;">Nuova Versione Minecraft:</label>
-            <input id="up-version-input" type="text" class="input" style="width: 100%;" placeholder="es. 1.21.2" />
+      <!-- Mods Tab -->
+      <div class="tab-content" id="tab-mods">
+        <div class="mods-layout">
+          <div class="mods-search-panel">
+            <input type="text" id="mod-search-input" placeholder="Cerca mod su Modrinth..." onkeydown="if(event.key==='Enter')searchMods()">
+            <div class="mod-results" id="mod-results"></div>
           </div>
-          <div>
-            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;">Nuovo Loader (opzionale):</label>
-            <select id="up-loader-select" class="input" style="width: 100%; cursor: pointer;">
-              <option value="">Mantieni Loader Attuale</option>
-              <option value="Fabric">Fabric</option>
-              <option value="Paper">Paper</option>
-              <option value="Vanilla">Vanilla</option>
-              <option value="NeoForge">NeoForge</option>
-              <option value="Purpur">Purpur</option>
-            </select>
+          <div class="mods-installed-panel">
+            <h3>Mod installate</h3>
+            <div class="installed-mods-list" id="installed-mods"></div>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <input id="up-backup-check" type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer;" />
-            <label for="up-backup-check" style="font-size: 0.9rem; cursor: pointer;">Crea backup di sicurezza del mondo prima di aggiornare</label>
-          </div>
-          <button id="btn-upgrade" class="btn btn-primary" onclick="submitUpgrade()" style="margin-top: 0.5rem;">🚀 Esegui Aggiornamento</button>
-          <div id="upgrade-status-msg" style="display: none; padding: 0.75rem; border-radius: 6px; font-size: 0.9rem;"></div>
         </div>
       </div>
 
-      <div class="grid-2">
-        <div class="card">
-          <h3 style="margin-bottom: 0.5rem;">💾 Backup Rapido del Mondo</h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-            Crea un archivio compresso <code>.tar.gz</code> contenente le cartelle del mondo e i file di configurazione, salvato nella cartella <code>backups/</code>.
-          </p>
-          <button id="btn-backup" class="btn btn-secondary" onclick="submitBackup()">Crea Backup Ora</button>
-          <div id="backup-status-msg" style="display: none; margin-top: 1rem; font-size: 0.85rem;"></div>
-        </div>
-
-        <div class="card">
-          <h3 style="margin-bottom: 0.5rem;">⚡ Regolazione Memoria RAM</h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-            Modifica la RAM massima allocata al processo Java (sarà effettiva al prossimo avvio del server).
-          </p>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <input id="ram-input" type="number" step="512" min="1024" class="input" style="max-width: 160px;" placeholder="es. 4096" />
-            <span style="font-size: 0.9rem; color: var(--text-muted);">MB</span>
-            <button class="btn btn-secondary" onclick="submitRam()">Salva RAM</button>
-          </div>
-          <div id="ram-status-msg" style="display: none; margin-top: 1rem; font-size: 0.85rem;"></div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    let ws;
-    let currentConfig = null;
-
-    function switchTab(name) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('main > div').forEach(d => d.style.display = 'none');
-      
-      const tabDiv = document.getElementById('tab-' + name);
-      if (tabDiv) tabDiv.style.display = 'block';
-      event.target.classList.add('active');
-
-      if (name === 'mods') {
-        loadInstalledMods();
-      } else if (name === 'network') {
-        runDiagnostics();
-      }
-    }
-
-    async function fetchConfig() {
-      try {
-        const res = await fetch('/api/config');
-        if (res.ok) {
-          currentConfig = await res.json();
-          document.getElementById('server-title').textContent = currentConfig.name;
-          document.getElementById('server-meta').textContent = `Versione: ${currentConfig.mc_version} | Loader: ${currentConfig.loader} | RAM: ${currentConfig.ram_max_mb} MB | Porta: ${currentConfig.port}`;
-          if (document.getElementById('up-version-input')) {
-            document.getElementById('up-version-input').value = currentConfig.mc_version;
-          }
-          if (document.getElementById('ram-input')) {
-            document.getElementById('ram-input').value = currentConfig.ram_max_mb;
-          }
-        }
-      } catch (e) {
-        console.error("Errore fetch config:", e);
-      }
-    }
-
-    async function checkStatus() {
-      try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
-        const badge = document.getElementById('status-badge');
-        const btnStart = document.getElementById('btn-start');
-        const btnStop = document.getElementById('btn-stop');
-
-        if (data.running) {
-          badge.className = 'badge online';
-          badge.innerHTML = '<span class="dot"></span> In Esecuzione';
-          btnStart.style.display = 'none';
-          btnStop.style.display = 'inline-flex';
-        } else {
-          badge.className = 'badge offline';
-          badge.innerHTML = '<span class="dot"></span> Spento';
-          btnStart.style.display = 'inline-flex';
-          btnStop.style.display = 'none';
-        }
-      } catch (e) {
-        console.error("Errore status:", e);
-      }
-    }
-
-    function initWebSocket() {
-      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${proto}//${window.location.host}/ws`);
-
-      ws.onmessage = (event) => {
-        const line = event.data;
-        appendLog(line);
-      };
-
-      ws.onclose = () => {
-        setTimeout(initWebSocket, 2000);
-      };
-    }
-
-    function appendLog(line) {
-      const term = document.getElementById('terminal');
-      const div = document.createElement('div');
-      div.className = 'terminal-line';
-      if (line.startsWith('> ')) {
-        div.style.color = '#38bdf8';
-      } else if (line.includes('WARN')) {
-        div.style.color = '#fbbf24';
-      } else if (line.includes('ERROR') || line.includes('[STDERR]')) {
-        div.style.color = '#f87171';
-      }
-      div.textContent = line;
-      term.appendChild(div);
-      term.scrollTop = term.scrollHeight;
-    }
-
-    async function startServer() {
-      appendLog("Richiesta avvio server inviata...");
-      await fetch('/api/start', { method: 'POST' });
-      setTimeout(checkStatus, 1000);
-    }
-
-    async function stopServer() {
-      appendLog("Richiesta arresto server inviata...");
-      await fetch('/api/stop', { method: 'POST' });
-      setTimeout(checkStatus, 1500);
-    }
-
-    async function sendCmd() {
-      const input = document.getElementById('cmd-input');
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
-      await fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: text })
-      });
-    }
-
-    async function searchMods() {
-      const q = document.getElementById('mod-search-input').value.trim();
-      if (!q) return;
-      const resContainer = document.getElementById('search-results');
-      resContainer.innerHTML = '<div style="color:var(--text-muted)">Ricerca in corso su Modrinth...</div>';
-
-      try {
-        const res = await fetch(`/api/mods/search?q=${encodeURIComponent(q)}`);
-        const hits = await res.json();
-        if (!hits || hits.length === 0) {
-          resContainer.innerHTML = '<div style="color:var(--text-muted)">Nessun risultato trovato.</div>';
-          return;
-        }
-
-        resContainer.innerHTML = hits.map(hit => `
-          <div class="mod-item">
-            <div style="display:flex; align-items:center; flex:1; min-width:0; margin-right:1rem;">
-              <img class="mod-icon" src="${hit.icon_url || 'https://assets.modrinth.com/assets/favicon.ico'}" onerror="this.src='https://assets.modrinth.com/assets/favicon.ico'" />
-              <div style="overflow:hidden;">
-                <div style="font-weight:600; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${hit.title}</div>
-                <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${hit.description}</div>
-              </div>
+      <!-- Network Tab -->
+      <div class="tab-content" id="tab-network">
+        <div class="net-layout">
+          <div class="net-card">
+            <h3>🌐 Diagnostica di rete</h3>
+            <div id="net-rows"><div style="color:var(--muted);font-size:.85em">Clicca "Controlla" per eseguire la diagnostica.</div></div>
+            <div style="margin-top:16px">
+              <button class="btn btn-accent" onclick="loadDiagnostics()">Controlla</button>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="installMod('${hit.slug}', this)">Installa</button>
           </div>
-        `).join('');
-      } catch (e) {
-        resContainer.innerHTML = `<div style="color:var(--danger)">Errore nella ricerca: ${e.message}</div>`;
-      }
-    }
-
-    async function installMod(slug, btn) {
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Scaricamento...';
-      }
-      try {
-        const res = await fetch('/api/mods/install', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          if (btn) { btn.textContent = '✓ Installato'; btn.className = 'btn btn-secondary btn-sm'; }
-          loadInstalledMods();
-        } else {
-          alert("Errore installazione mod: " + data.error);
-          if (btn) { btn.disabled = false; btn.textContent = 'Installa'; }
-        }
-      } catch (e) {
-        alert("Errore installazione: " + e.message);
-        if (btn) { btn.disabled = false; btn.textContent = 'Installa'; }
-      }
-    }
-
-    async function loadInstalledMods() {
-      const container = document.getElementById('installed-mods-list');
-      try {
-        const res = await fetch('/api/mods/list');
-        const list = await res.json();
-        if (!list || list.length === 0) {
-          container.innerHTML = '<div style="color:var(--text-muted)">Nessuna mod installata nella cartella mods/.</div>';
-          return;
-        }
-        container.innerHTML = list.map(m => `
-          <div class="mod-item">
-            <span style="font-family:monospace; font-size:0.9rem;">📦 ${m}</span>
-            <button class="btn btn-danger btn-sm" onclick="removeMod('${m}')">Rimuovi</button>
+          <div class="net-card" id="net-share-card" style="display:none">
+            <h3>📋 Condividi con gli amici</h3>
+            <div class="net-row"><span class="net-label">IP per rete locale (LAN):</span><span class="net-value" id="share-lan">-</span></div>
+            <div class="net-row"><span class="net-label">IP pubblico (Internet):</span><span class="net-value" id="share-pub">-</span></div>
+            <div class="net-row"><span class="net-label">Porta:</span><span class="net-value" id="share-port">-</span></div>
           </div>
-        `).join('');
-      } catch (e) {
-        container.innerHTML = `<div style="color:var(--danger)">Errore: ${e.message}</div>`;
-      }
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div class="tab-content" id="tab-settings">
+        <div class="settings-layout">
+          <div class="settings-card">
+            <h3>⚙ Configurazione server</h3>
+            <div class="settings-row"><label>Nome server</label><input id="cfg-name" disabled></div>
+            <div class="settings-row"><label>Versione MC</label><input id="cfg-version" disabled></div>
+            <div class="settings-row"><label>ModLoader</label><input id="cfg-loader" disabled></div>
+            <div class="settings-row"><label>Porta</label><input id="cfg-port" disabled></div>
+          </div>
+          <div class="settings-card">
+            <h3>💾 Memoria RAM</h3>
+            <div class="settings-row">
+              <label>RAM massima (MB)</label>
+              <input type="number" id="ram-input" placeholder="es. 4096" min="512">
+              <button class="btn btn-accent" onclick="updateRam()">Applica</button>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3>🔄 Aggiorna server</h3>
+            <div class="settings-row">
+              <label>Nuova versione</label>
+              <input id="upg-version" placeholder="es. 1.21.4">
+            </div>
+            <div class="settings-row">
+              <label>Loader</label>
+              <select id="upg-loader">
+                <option value="">Mantieni attuale</option>
+                <option value="vanilla">Vanilla</option>
+                <option value="paper">Paper</option>
+                <option value="purpur">Purpur</option>
+                <option value="fabric">Fabric</option>
+                <option value="neoforge">NeoForge</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <label>Backup prima</label>
+              <input type="checkbox" id="upg-backup" checked style="width:auto;flex:none">
+            </div>
+            <div class="settings-row">
+              <button class="btn btn-accent" onclick="upgradeServer()">Aggiorna</button>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3>🖥 Gestione server nel registro</h3>
+            <div class="settings-row">
+              <button class="btn btn-muted" onclick="unregisterCurrentServer()">Rimuovi dal registro</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Server Modal -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <h3>➕ Aggiungi server al registro</h3>
+    <input type="text" id="add-name" placeholder="Nome (es. survival)">
+    <input type="text" id="add-path" placeholder="Percorso assoluto (es. /home/user/survival)">
+    <div class="modal-btns">
+      <button class="btn btn-muted" onclick="hideAddModal()">Annulla</button>
+      <button class="btn btn-accent" onclick="addServer()">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let TOKEN = '';
+let currentServer = null; // nome del server selezionato
+let ws = null;
+let serverList = [];
+
+// ── Login ──
+function doLogin() {
+  const t = document.getElementById('token-input').value.trim();
+  if (!t) return;
+  fetch('/api/login', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({token: t})
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      TOKEN = t;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      loadServerList();
+    } else {
+      const err = document.getElementById('login-error');
+      err.textContent = d.message;
+      err.style.display = 'block';
     }
+  }).catch(() => {
+    document.getElementById('login-error').textContent = 'Errore di connessione.';
+    document.getElementById('login-error').style.display = 'block';
+  });
+}
 
-    async function removeMod(filename) {
-      if (!confirm(`Sei sicuro di voler rimuovere ${filename}?`)) return;
-      await fetch('/api/mods/remove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename })
-      });
-      loadInstalledMods();
+document.getElementById('token-input').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  TOKEN = '';
+  currentServer = null;
+  if (ws) ws.close();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('token-input').value = '';
+}
+
+// ── API helper ──
+async function api(method, path, body) {
+  const opts = { method, headers: {'X-GSMM-Token': TOKEN, 'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  return r;
+}
+
+// ── Server list ──
+async function loadServerList() {
+  try {
+    const r = await api('GET', '/api/servers');
+    serverList = await r.json();
+    renderServerList();
+    if (serverList.length > 0 && !currentServer) {
+      selectServer(serverList[0].name);
     }
+  } catch(e) { console.error(e); }
+}
 
-    async function runDiagnostics() {
-      const box = document.getElementById('diagnostics-result');
-      box.style.display = 'block';
-      document.getElementById('lan-ip-display').textContent = 'Controllo...';
-      document.getElementById('wan-ip-display').textContent = 'Controllo...';
-      document.getElementById('port-status-text').textContent = 'Test di connessione in corso...';
+function renderServerList() {
+  const el = document.getElementById('server-list');
+  el.innerHTML = '';
+  for (const s of serverList) {
+    const item = document.createElement('div');
+    item.className = 'server-item' + (s.name === currentServer ? ' active' : '');
+    item.innerHTML = `
+      <div class="server-dot ${s.running ? 'online' : 'offline'}"></div>
+      <div class="server-info">
+        <div class="server-name">${s.name}</div>
+        <div class="server-ver">${s.mc_version || ''} ${s.loader ? '('+s.loader+')' : ''}</div>
+      </div>`;
+    item.onclick = () => selectServer(s.name);
+    el.appendChild(item);
+  }
+}
 
-      try {
-        const res = await fetch('/api/diagnostics');
-        const rep = await res.json();
-        document.getElementById('lan-ip-display').textContent = rep.lan_address || 'Non disponibile';
-        document.getElementById('wan-ip-display').textContent = rep.wan_address || 'Non disponibile';
-        document.getElementById('port-status-text').textContent = rep.port_forwarding_status;
-      } catch (e) {
-        document.getElementById('port-status-text').textContent = 'Errore diagnostica: ' + e.message;
-      }
+function selectServer(name) {
+  currentServer = name;
+  renderServerList();
+
+  const s = serverList.find(x => x.name === name);
+  document.getElementById('topbar-server-name').textContent = name;
+  document.getElementById('console-server-name').textContent = name;
+
+  updateStatusUI(s ? s.running : false);
+  connectWS();
+  loadInstalledMods();
+  loadConfig();
+}
+
+// ── Status ──
+function updateStatusUI(running) {
+  const badge = document.getElementById('status-badge');
+  const btnStart = document.getElementById('btn-start');
+  const btnStop = document.getElementById('btn-stop');
+  badge.className = 'status-badge ' + (running ? 'online' : 'offline');
+  badge.textContent = running ? 'Online' : 'Offline';
+  btnStart.disabled = running;
+  btnStop.disabled = !running;
+}
+
+async function pollStatus() {
+  if (!currentServer || !TOKEN) return;
+  try {
+    const r = await api('GET', `/api/status?server=${currentServer}`);
+    const d = await r.json();
+    updateStatusUI(d.running);
+    // Aggiorna anche la lista
+    const s = serverList.find(x => x.name === currentServer);
+    if (s) s.running = d.running;
+    renderServerList();
+  } catch(e) {}
+}
+setInterval(pollStatus, 5000);
+
+// ── WebSocket console ──
+function connectWS() {
+  if (ws) ws.close();
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const serverParam = currentServer ? `&server=${currentServer}` : '';
+  ws = new WebSocket(`${proto}://${location.host}/ws?token=${TOKEN}${serverParam}`);
+  ws.onmessage = e => appendLog(e.data);
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+function appendLog(line) {
+  const log = document.getElementById('console-log');
+  const div = document.createElement('div');
+  div.className = 'line';
+  const lower = line.toLowerCase();
+  if (lower.includes('warn')) div.classList.add('warn');
+  if (lower.includes('error') || lower.includes('exception')) div.classList.add('error');
+  if (lower.includes('joined') || lower.includes('left')) div.classList.add('join');
+  div.textContent = line;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ── Start / Stop / Backup ──
+async function startServer() {
+  const r = await api('POST', '/api/start', { server: currentServer });
+  if (r.ok) { updateStatusUI(true); toast('Server avviato!', 'ok'); }
+  else { const d = await r.json(); toast(d.error, 'err'); }
+}
+
+async function stopServer() {
+  const r = await api('POST', '/api/stop', { server: currentServer });
+  if (r.ok) { updateStatusUI(false); toast('Server fermato.', 'ok'); }
+  else { const d = await r.json(); toast(d.error, 'err'); }
+}
+
+async function triggerBackup() {
+  toast('Backup in corso...', 'ok');
+  const r = await api('POST', '/api/server/backup', { server: currentServer });
+  const d = await r.json();
+  toast(r.ok ? d.message : d.error, r.ok ? 'ok' : 'err');
+}
+
+// ── Command ──
+async function sendCmd() {
+  const input = document.getElementById('cmd-input');
+  const cmd = input.value.trim();
+  if (!cmd) return;
+  input.value = '';
+  const r = await api('POST', '/api/command', { command: cmd, server: currentServer });
+  if (!r.ok) { const d = await r.json(); toast(d.error, 'err'); }
+}
+
+// ── Config ──
+async function loadConfig() {
+  try {
+    const r = await api('GET', `/api/config?server=${currentServer}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('cfg-name').value = d.name || '';
+    document.getElementById('cfg-version').value = d.mc_version || '';
+    document.getElementById('cfg-loader').value = d.loader || '';
+    document.getElementById('cfg-port').value = d.port || '';
+    document.getElementById('ram-input').value = d.ram_max_mb || '';
+  } catch(e) {}
+}
+
+// ── RAM ──
+async function updateRam() {
+  const val = parseInt(document.getElementById('ram-input').value);
+  if (!val || val < 512) { toast('Inserisci un valore valido (min 512 MB)', 'err'); return; }
+  const r = await api('POST', '/api/server/ram', { ram_mb: val, server: currentServer });
+  const d = await r.json();
+  toast(r.ok ? d.message : d.error, r.ok ? 'ok' : 'err');
+}
+
+// ── Upgrade ──
+async function upgradeServer() {
+  const version = document.getElementById('upg-version').value.trim();
+  if (!version) { toast('Inserisci la versione di destinazione', 'err'); return; }
+  const loader = document.getElementById('upg-loader').value || null;
+  const backup = document.getElementById('upg-backup').checked;
+  toast('Aggiornamento in corso...', 'ok');
+  const r = await api('POST', '/api/server/upgrade', { version, loader, backup, server: currentServer });
+  const d = await r.json();
+  toast(r.ok ? d.message : d.error, r.ok ? 'ok' : 'err');
+  if (r.ok) loadConfig();
+}
+
+// ── Mods ──
+async function searchMods() {
+  const q = document.getElementById('mod-search-input').value.trim();
+  if (!q) return;
+  const r = await api('GET', `/api/mods/search?q=${encodeURIComponent(q)}&server=${currentServer}`);
+  const hits = await r.json();
+  const el = document.getElementById('mod-results');
+  el.innerHTML = '';
+  if (!hits.length) { el.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:.85em">Nessun risultato.</div>'; return; }
+  for (const h of hits) {
+    const div = document.createElement('div');
+    div.className = 'mod-result-item';
+    div.innerHTML = `<div class="mod-title">${h.title}</div><div class="mod-desc">${h.description}</div><div class="mod-dl">⬇ ${h.downloads.toLocaleString()}</div>`;
+    div.onclick = () => installMod(h.slug, h.title);
+    el.appendChild(div);
+  }
+}
+
+async function installMod(slug, title) {
+  toast(`Installazione ${title}...`, 'ok');
+  const r = await api('POST', '/api/mods/install', { slug, server: currentServer });
+  const d = await r.json();
+  if (r.ok) { toast(`✓ Installato: ${d.join(', ')}`, 'ok'); loadInstalledMods(); }
+  else toast(d.error, 'err');
+}
+
+async function loadInstalledMods() {
+  try {
+    const r = await api('GET', `/api/mods/list?server=${currentServer}`);
+    const mods = await r.json();
+    const el = document.getElementById('installed-mods');
+    el.innerHTML = '';
+    if (!mods.length) { el.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:.85em">Nessuna mod installata.</div>'; return; }
+    for (const m of mods) {
+      const row = document.createElement('div');
+      row.className = 'installed-mod-row';
+      row.innerHTML = `<span class="mod-filename">${m}</span><button class="mod-remove-btn" title="Rimuovi" onclick="removeMod('${m}')">✕</button>`;
+      el.appendChild(row);
     }
+  } catch(e) {}
+}
 
-    async function submitUpgrade() {
-      const version = document.getElementById('up-version-input').value.trim();
-      const loader = document.getElementById('up-loader-select').value;
-      const backup = document.getElementById('up-backup-check').checked;
-      const msgDiv = document.getElementById('upgrade-status-msg');
-      const btn = document.getElementById('btn-upgrade');
+async function removeMod(filename) {
+  if (!confirm(`Rimuovere ${filename}?`)) return;
+  const r = await api('POST', '/api/mods/remove', { filename, server: currentServer });
+  if (r.ok) { toast('Mod rimossa.', 'ok'); loadInstalledMods(); }
+  else { const d = await r.json(); toast(d.error, 'err'); }
+}
 
-      if (!version) {
-        alert("Inserisci la nuova versione di Minecraft!");
-        return;
-      }
+// ── Network ──
+async function loadDiagnostics() {
+  const el = document.getElementById('net-rows');
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85em">Verifica in corso...</div>';
+  try {
+    const r = await api('GET', `/api/diagnostics?server=${currentServer}`);
+    const d = await r.json();
+    el.innerHTML = `
+      <div class="net-row"><span class="net-label">IP Locale (LAN):</span><span class="net-value">${d.local_ip || '-'}</span></div>
+      <div class="net-row"><span class="net-label">IP Pubblico:</span><span class="net-value">${d.public_ip || '-'}</span></div>
+      <div class="net-row"><span class="net-label">Porta:</span><span class="net-value">${d.port}</span></div>
+      <div class="net-row"><span class="net-label">Stato server locale:</span><span class="net-value ${d.local_port_open ? 'net-ok' : 'net-fail'}">${d.is_listening_locally ? '✓ Attivo in ascolto' : '✗ Offline o in avvio'}</span></div>
+      <div class="net-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <span class="net-label" style="margin-top:8px">Connessioni esterne:</span>
+        <span class="net-value" style="color:var(--muted);font-weight:normal">${d.port_forwarding_status}</span>
+      </div>`;
+    // Scheda condivisione
+    document.getElementById('net-share-card').style.display = 'block';
+    document.getElementById('share-lan').textContent = `${d.local_ip || '-'}:${d.port}`;
+    document.getElementById('share-pub').textContent = `${d.public_ip || '-'}:${d.port}`;
+    document.getElementById('share-port').textContent = d.port;
+  } catch(e) { el.innerHTML = '<div style="color:var(--red)">Errore nella diagnostica.</div>'; }
+}
 
-      if (!confirm(`Sei sicuro di voler aggiornare il server a Minecraft ${version}? Il mondo rimarrà intatto.`)) {
-        return;
-      }
+// ── Registry helpers ──
+function showAddModal() { document.getElementById('add-modal').classList.add('show'); }
+function hideAddModal() { document.getElementById('add-modal').classList.remove('show'); }
 
-      btn.disabled = true;
-      btn.textContent = 'Aggiornamento in corso...';
-      msgDiv.style.display = 'block';
-      msgDiv.style.background = 'rgba(56, 189, 248, 0.2)';
-      msgDiv.style.color = '#38bdf8';
-      msgDiv.textContent = 'Scaricamento nuova versione e configurazione in corso... Attendi un attimo.';
+async function addServer() {
+  const name = document.getElementById('add-name').value.trim();
+  const path = document.getElementById('add-path').value.trim();
+  if (!name || !path) { toast('Compila nome e percorso', 'err'); return; }
+  const r = await api('POST', '/api/servers/register', { name, path });
+  const d = await r.json();
+  if (r.ok) { toast(d.message, 'ok'); hideAddModal(); loadServerList(); }
+  else toast(d.error, 'err');
+}
 
-      try {
-        const res = await fetch('/api/server/upgrade', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            version,
-            loader: loader || null,
-            backup
-          })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          msgDiv.style.background = 'rgba(16, 185, 129, 0.2)';
-          msgDiv.style.color = '#34d399';
-          msgDiv.textContent = '✓ ' + data.message;
-          fetchConfig();
-        } else {
-          msgDiv.style.background = 'rgba(239, 68, 68, 0.2)';
-          msgDiv.style.color = '#f87171';
-          msgDiv.textContent = '✗ ' + data.error;
-        }
-      } catch (e) {
-        msgDiv.style.background = 'rgba(239, 68, 68, 0.2)';
-        msgDiv.style.color = '#f87171';
-        msgDiv.textContent = '✗ Errore di rete: ' + e.message;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '🚀 Esegui Aggiornamento';
-      }
-    }
+async function unregisterCurrentServer() {
+  if (!currentServer) return;
+  if (!confirm(`Rimuovere '${currentServer}' dal registro? I file del server non verranno eliminati.`)) return;
+  const r = await api('POST', '/api/servers/unregister', { name: currentServer });
+  const d = await r.json();
+  if (r.ok) { toast(d.message, 'ok'); currentServer = null; loadServerList(); }
+  else toast(d.error, 'err');
+}
 
-    async function submitBackup() {
-      const msgDiv = document.getElementById('backup-status-msg');
-      const btn = document.getElementById('btn-backup');
-      btn.disabled = true;
-      btn.textContent = 'Creazione in corso...';
-      msgDiv.style.display = 'block';
-      msgDiv.style.color = 'var(--text-muted)';
-      msgDiv.textContent = 'Compressione del mondo e configurazioni in corso...';
+// ── Tabs ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['console','mods','network','settings'][i] === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'mods') loadInstalledMods();
+  if (name === 'settings') loadConfig();
+}
 
-      try {
-        const res = await fetch('/api/server/backup', { method: 'POST' });
-        const data = await res.json();
-        if (res.ok) {
-          msgDiv.style.color = '#34d399';
-          msgDiv.textContent = '✓ ' + data.message;
-        } else {
-          msgDiv.style.color = '#f87171';
-          msgDiv.textContent = '✗ ' + data.error;
-        }
-      } catch (e) {
-        msgDiv.style.color = '#f87171';
-        msgDiv.textContent = '✗ Errore: ' + e.message;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Crea Backup Ora';
-      }
-    }
-
-    async function submitRam() {
-      const val = parseInt(document.getElementById('ram-input').value, 10);
-      const msgDiv = document.getElementById('ram-status-msg');
-      if (!val || val < 1024) {
-        alert("Inserisci un valore di RAM valido in MB (almeno 1024 MB).");
-        return;
-      }
-      msgDiv.style.display = 'block';
-      msgDiv.style.color = 'var(--text-muted)';
-      msgDiv.textContent = 'Salvataggio...';
-
-      try {
-        const res = await fetch('/api/server/ram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ram_mb: val })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          msgDiv.style.color = '#34d399';
-          msgDiv.textContent = '✓ ' + data.message;
-          fetchConfig();
-        } else {
-          msgDiv.style.color = '#f87171';
-          msgDiv.textContent = '✗ ' + data.error;
-        }
-      } catch (e) {
-        msgDiv.style.color = '#f87171';
-        msgDiv.textContent = '✗ Errore: ' + e.message;
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      fetchConfig();
-      checkStatus();
-      initWebSocket();
-      setInterval(checkStatus, 3000);
-    });
-  </script>
+// ── Toast ──
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = 'toast', 3500);
+}
+</script>
 </body>
 </html>
