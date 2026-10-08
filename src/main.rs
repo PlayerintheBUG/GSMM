@@ -3,6 +3,8 @@ mod downloader;
 mod network;
 mod cli;
 mod web;
+mod registry;
+mod service;
 
 use std::env;
 use std::path::PathBuf;

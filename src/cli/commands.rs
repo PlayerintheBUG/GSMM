@@ -4,7 +4,7 @@ use anyhow::Result;
 use colored::*;
 
 use super::interactive::run_interactive_wizard;
-use super::{Commands, ModCommands};
+use super::{Commands, ModCommands, ServerCommands, ServiceCommands};
 use crate::core::config::{LoaderType, ServerConfig};
 use crate::core::process::ServerManager;
 use crate::downloader::fabric::FabricClient;
@@ -13,6 +13,7 @@ use crate::downloader::neoforge::NeoForgeClient;
 use crate::downloader::papermc::PaperClient;
 use crate::downloader::modrinth::ModrinthClient;
 use crate::network::port_check::{generate_diagnostics_report, print_diagnostics_report};
+use crate::registry::Registry;
 use crate::web::server::start_web_server;
 
 pub async fn handle_command(cmd_opt: Option<Commands>, server_dir: &Path) -> Result<()> {
@@ -27,12 +28,7 @@ pub async fn handle_command(cmd_opt: Option<Commands>, server_dir: &Path) -> Res
                 run_interactive_wizard(server_dir).await?;
             }
         }
-        Some(Commands::Init {
-            version,
-            loader,
-            ram,
-            mods,
-        }) => {
+        Some(Commands::Init { version, loader, ram, mods, name }) => {
             if version.is_none() && loader.is_none() {
                 run_interactive_wizard(server_dir).await?;
             } else {
@@ -46,9 +42,16 @@ pub async fn handle_command(cmd_opt: Option<Commands>, server_dir: &Path) -> Res
                 let ram_max_mb = ram.unwrap_or(4096);
                 let ram_min_mb = (ram_max_mb / 2).max(1024);
 
+                let server_name = name.unwrap_or_else(|| {
+                    server_dir.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("server")
+                        .to_string()
+                });
+
                 println!("Configurazione server automatica (Versione: {}, Loader: {})...", mc_version, loader_enum);
 
-                let loader_str = format!("{}", loader_enum).to_lowercase();
+                let loader_str = loader_enum.to_string().to_lowercase();
                 let jar_name = match loader_enum {
                     LoaderType::Vanilla => {
                         let client = MojangClient::new();
@@ -87,7 +90,7 @@ pub async fn handle_command(cmd_opt: Option<Commands>, server_dir: &Path) -> Res
                 ServerConfig::ensure_server_properties(server_dir, 25565, "Minecraft Server GSMM").await?;
 
                 let config = ServerConfig {
-                    name: "Minecraft Server".to_string(),
+                    name: server_name.clone(),
                     mc_version,
                     loader: loader_enum,
                     loader_version: None,
@@ -99,6 +102,13 @@ pub async fn handle_command(cmd_opt: Option<Commands>, server_dir: &Path) -> Res
                     jvm_args: ServerConfig::default().jvm_args,
                 };
                 config.save_to_dir(server_dir).await?;
+
+                // Auto-registra nel registro globale
+                if let Ok(mut reg) = Registry::load() {
+                    let _ = reg.register(&server_name, server_dir);
+                    println!("{}", format!("✓ Server '{}' registrato nel registro globale.", server_name).cyan());
+                }
+
                 println!("{}", "✓ Server inizializzato e configurato con successo!".green().bold());
             }
         }
@@ -136,7 +146,7 @@ pub async fn handle_command(cmd_opt: Option<Commands>, server_dir: &Path) -> Res
         Some(Commands::Backup) => {
             println!("Creazione copia di backup del mondo e configurazioni...");
             let bpath = crate::core::backup::create_world_backup(server_dir)?;
-            println!("{}", format!("✓ Backup completato con successo in: {}", bpath.display()).green().bold());
+            println!("{}", format!("✓ Backup completato in: {}", bpath.display()).green().bold());
         }
         Some(Commands::Mod(mod_cmd)) => match mod_cmd {
             ModCommands::Search { query, limit } => {
@@ -156,12 +166,103 @@ pub async fn handle_command(cmd_opt: Option<Commands>, server_dir: &Path) -> Res
             check_network_cli(port, server_dir).await?;
         }
         Some(Commands::Web { port, no_open }) => {
-            start_web_server(server_dir, port, !no_open).await?;
+            // Passa la dir corrente come server default solo se ha una config
+            let maybe_dir = if ServerConfig::load_from_dir(server_dir).await.is_ok() {
+                Some(server_dir)
+            } else {
+                None
+            };
+            start_web_server(maybe_dir, port, !no_open).await?;
+        }
+        Some(Commands::Server(server_cmd)) => {
+            handle_server_command(server_cmd, server_dir).await?;
+        }
+        Some(Commands::Service(service_cmd)) => {
+            handle_service_command(service_cmd, server_dir).await?;
         }
     }
 
     Ok(())
 }
+
+// ─── Server registry commands ─────────────────────────────────────────────────
+
+async fn handle_server_command(cmd: ServerCommands, server_dir: &Path) -> Result<()> {
+    match cmd {
+        ServerCommands::List => {
+            let reg = Registry::load()?;
+            if reg.servers.is_empty() {
+                println!("{}", "Nessun server registrato. Usa 'gsmm server add <nome>' o 'gsmm init'.".yellow());
+            } else {
+                println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+                println!("{}", "   📋 SERVER REGISTRATI IN GSMM".green().bold());
+                println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+                for entry in &reg.servers {
+                    let exists = entry.path.exists();
+                    let cfg = ServerConfig::load_from_dir(&entry.path).await.ok();
+                    let version_info = cfg.as_ref()
+                        .map(|c| format!(" | MC {} ({})", c.mc_version, c.loader))
+                        .unwrap_or_default();
+                    let status_icon = if exists { "✓".green() } else { "✗ (percorso non trovato)".red() };
+                    println!("  {} {} — {}{}", status_icon, entry.name.cyan().bold(), entry.path.display(), version_info.yellow());
+                }
+                println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+                println!("  Totale: {} server", reg.servers.len());
+            }
+        }
+        ServerCommands::Add { name, path } => {
+            let target = path.unwrap_or_else(|| server_dir.to_path_buf());
+            if !target.exists() {
+                anyhow::bail!("Il percorso '{}' non esiste.", target.display());
+            }
+            let mut reg = Registry::load()?;
+            reg.register(&name, &target)?;
+            println!("{}", format!("✓ Server '{}' aggiunto al registro ({}).", name, target.display()).green().bold());
+        }
+        ServerCommands::Remove { name } => {
+            let mut reg = Registry::load()?;
+            if reg.unregister(&name)? {
+                println!("{}", format!("✓ Server '{}' rimosso dal registro (i file non sono stati eliminati).", name).green().bold());
+            } else {
+                anyhow::bail!("Server '{}' non trovato nel registro.", name);
+            }
+        }
+    }
+    Ok(())
+}
+
+// ─── Service commands ─────────────────────────────────────────────────────────
+
+async fn handle_service_command(cmd: ServiceCommands, server_dir: &Path) -> Result<()> {
+    match cmd {
+        ServiceCommands::Install { name, bin } => {
+            let service_name = if let Some(n) = name {
+                n
+            } else {
+                ServerConfig::load_from_dir(server_dir).await
+                    .map(|c| c.name.replace(' ', "-").to_lowercase())
+                    .unwrap_or_else(|_| {
+                        server_dir.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("minecraft")
+                            .to_string()
+                    })
+            };
+            println!("Installazione servizio di sistema per server '{}'...", service_name.cyan());
+            crate::service::install_service(server_dir, &service_name, bin.as_deref()).await?;
+        }
+        ServiceCommands::Uninstall { name } => {
+            println!("Rimozione servizio di sistema '{}'...", name.cyan());
+            crate::service::uninstall_service(&name).await?;
+        }
+        ServiceCommands::Status { name } => {
+            crate::service::service_status(&name).await?;
+        }
+    }
+    Ok(())
+}
+
+// ─── Status / Search / Add / List / Remove ────────────────────────────────────
 
 pub async fn show_status_cli(server_dir: &Path) -> Result<()> {
     let config = ServerConfig::load_from_dir(server_dir).await?;
@@ -283,7 +384,7 @@ pub async fn upgrade_server_core(
 
     let mut config = ServerConfig::load_from_dir(server_dir).await?;
     let loader = new_loader.unwrap_or(config.loader);
-    let loader_str = format!("{}", loader).to_lowercase();
+    let loader_str = loader.to_string().to_lowercase();
 
     println!("Scaricamento server per MC {} ({loader})...", new_version);
     let jar_name = match loader {
@@ -324,7 +425,7 @@ pub async fn handle_console_input(input: &str, server_dir: &Path) -> Result<bool
 
     let gsmm_args: Option<Vec<&str>> = if let Some(stripped) = trimmed.strip_prefix("gsmm ") {
         Some(stripped.split_whitespace().collect())
-    } else if let Some(stripped) = trimmed.strip_prefix("!") {
+    } else if let Some(stripped) = trimmed.strip_prefix('!') {
         Some(stripped.split_whitespace().collect())
     } else if trimmed == "gsmm" || trimmed == "!help" || trimmed == "gsmm help" {
         Some(vec!["help"])

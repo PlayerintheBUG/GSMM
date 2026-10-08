@@ -87,6 +87,12 @@ impl ServerManager {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
+        let full_cmd = format!("{:?}", cmd);
+        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+        println!("🚀 Avvio del server Minecraft in corso...");
+        println!("🔧 Comando: {}", full_cmd.yellow());
+        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+
         let mut child = cmd.spawn().with_context(|| format!("Impossibile avviare il processo Java con '{}'", java.path.display()))?;
 
         let stdout = child.stdout.take().context("Impossibile catturare stdout")?;

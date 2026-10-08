@@ -25,27 +25,6 @@ pub async fn check_local_port(port: u16) -> bool {
     }
 }
 
-pub async fn check_external_port_reachable(public_ip: &str, port: u16) -> Result<bool> {
-    // Check using a fast external port-check API
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()?;
-
-    // Port check via portchecker / yougetsignal style check or mc status
-    let check_url = format!("https://api.mcsrvstat.us/3/{}:{}", public_ip, port);
-    if let Ok(res) = client.get(&check_url).send().await {
-        if let Ok(json) = res.json::<serde_json::Value>().await {
-            if let Some(online) = json.get("online").and_then(|v| v.as_bool()) {
-                if online {
-                    return Ok(true);
-                }
-            }
-        }
-    }
-
-    Ok(false)
-}
-
 pub async fn generate_diagnostics_report(port: u16) -> ServerCheckReport {
     let is_listening = check_local_port(port).await;
     let net = get_network_info().await;
@@ -53,15 +32,11 @@ pub async fn generate_diagnostics_report(port: u16) -> ServerCheckReport {
     let lan_addr = net.local_ip.as_ref().map(|ip| format!("{}:{}", ip, port));
     let wan_addr = net.public_ip.as_ref().map(|ip| format!("{}:{}", ip, port));
 
-    let mut pf_status = "Non verificabile (Server non attivo o verifica non riuscita)".to_string();
-    if is_listening {
-        if let Some(ref pub_ip) = net.public_ip {
-            match check_external_port_reachable(pub_ip, port).await {
-                Ok(true) => pf_status = "APERTA E RAGGIUNGIBILE DALL'ESTERNO (Port Forwarding OK)".to_string(),
-                _ => pf_status = "In ascolto locale. Se giochi con amici fuori casa, verifica di aver aperto la porta 25565 TCP nel router (Port Forwarding).".to_string(),
-            }
-        }
-    }
+    let pf_status = if is_listening {
+        "APERTA IN LOCALE (✓). Se hai fatto il Port Forwarding nel router, i tuoi amici possono entrare con l'IP Pubblico.".to_string()
+    } else {
+        "IN ATTESA (Il server è offline o si sta ancora avviando).".to_string()
+    };
 
     ServerCheckReport {
         port,
