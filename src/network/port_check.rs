@@ -1,5 +1,4 @@
 use std::time::Duration;
-use anyhow::Result;
 use colored::*;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;

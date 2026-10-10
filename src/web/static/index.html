@@ -213,6 +213,23 @@
           <div class="server-header">
             <h2 id="console-server-name">Nessun server</h2>
             <span class="status-badge offline" id="status-badge">Offline</span>
+            <div id="stats-panel" style="display:none; align-items:center; gap:16px; margin-left:14px; font-size:0.82em;">
+              <div style="display:flex; align-items:center; gap:5px;" title="Utilizzo CPU">
+                <span style="color:var(--muted)">CPU:</span>
+                <span id="stat-cpu" style="font-family:monospace; font-weight:600; color:var(--accent2)">0.0%</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;" title="RAM reale (RSS)">
+                <span style="color:var(--muted)">RAM:</span>
+                <span id="stat-ram" style="font-family:monospace; font-weight:600;">0 MB</span>
+                <div style="width:65px; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; border:1px solid var(--border);">
+                  <div id="stat-ram-bar" style="width:0%; height:100%; background:var(--accent); transition:width .3s, background-color .3s;"></div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:5px;" title="Tempo di attività">
+                <span style="color:var(--muted)">Uptime:</span>
+                <span id="stat-uptime" style="font-family:monospace; color:var(--text)">-</span>
+              </div>
+            </div>
             <div style="margin-left:auto; display:flex; gap:8px">
               <button class="btn btn-green" id="btn-start" onclick="startServer()">▶ Avvia</button>
               <button class="btn btn-red" id="btn-stop" onclick="stopServer()" disabled>■ Ferma</button>
@@ -399,11 +416,12 @@ function renderServerList() {
   for (const s of serverList) {
     const item = document.createElement('div');
     item.className = 'server-item' + (s.name === currentServer ? ' active' : '');
+    const ramInfo = (s.running && s.memory_mb) ? ` • ${s.memory_mb}MB` : '';
     item.innerHTML = `
       <div class="server-dot ${s.running ? 'online' : 'offline'}"></div>
       <div class="server-info">
         <div class="server-name">${s.name}</div>
-        <div class="server-ver">${s.mc_version || ''} ${s.loader ? '('+s.loader+')' : ''}</div>
+        <div class="server-ver">${s.mc_version || ''} ${s.loader ? '('+s.loader+')' : ''}${ramInfo}</div>
       </div>`;
     item.onclick = () => selectServer(s.name);
     el.appendChild(item);
@@ -422,6 +440,7 @@ function selectServer(name) {
   connectWS();
   loadInstalledMods();
   loadConfig();
+  pollStats();
 }
 
 // ── Status ──
@@ -433,7 +452,57 @@ function updateStatusUI(running) {
   badge.textContent = running ? 'Online' : 'Offline';
   btnStart.disabled = running;
   btnStop.disabled = !running;
+  if (!running) {
+    const p = document.getElementById('stats-panel');
+    if (p) p.style.display = 'none';
+  }
 }
+
+async function pollStats() {
+  if (!currentServer || !TOKEN) return;
+  try {
+    const r = await api('GET', `/api/stats?server=${currentServer}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const panel = document.getElementById('stats-panel');
+    if (d.running) {
+      if (panel) panel.style.display = 'flex';
+      const cpuEl = document.getElementById('stat-cpu');
+      if (cpuEl) cpuEl.textContent = `${d.cpu_percent.toFixed(1)}%`;
+
+      let ramText = `${d.memory_mb} MB`;
+      if (d.memory_limit_mb) {
+        ramText = `${(d.memory_mb / 1024).toFixed(1)} / ${(d.memory_limit_mb / 1024).toFixed(1)} GB`;
+      }
+      const ramEl = document.getElementById('stat-ram');
+      if (ramEl) ramEl.textContent = ramText;
+
+      const bar = document.getElementById('stat-ram-bar');
+      if (bar) {
+        const pct = Math.min(100, Math.max(0, d.memory_percent || 0));
+        bar.style.width = `${pct}%`;
+        if (pct > 85) {
+          bar.style.backgroundColor = 'var(--red)';
+        } else if (pct > 70) {
+          bar.style.backgroundColor = 'var(--yellow)';
+        } else {
+          bar.style.backgroundColor = 'var(--accent2)';
+        }
+      }
+
+      let uptimeStr = '-';
+      const s = d.uptime_seconds;
+      if (s < 60) uptimeStr = `${s}s`;
+      else if (s < 3600) uptimeStr = `${Math.floor(s/60)}m ${s%60}s`;
+      else uptimeStr = `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+      const upEl = document.getElementById('stat-uptime');
+      if (upEl) upEl.textContent = uptimeStr;
+    } else {
+      if (panel) panel.style.display = 'none';
+    }
+  } catch(e) {}
+}
+setInterval(pollStats, 2000);
 
 async function pollStatus() {
   if (!currentServer || !TOKEN) return;

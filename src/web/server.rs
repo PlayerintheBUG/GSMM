@@ -138,6 +138,10 @@ struct ServerListEntry {
     mc_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     loader: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    memory_mb: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cpu_percent: Option<f32>,
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -254,6 +258,7 @@ pub async fn start_web_server(server_dir: Option<&Path>, port: u16, open_browser
         .route("/ws", get(ws_handler))
         .route("/api/config", get(get_config))
         .route("/api/status", get(get_status))
+        .route("/api/stats", get(get_stats))
         .route("/api/start", post(start_server))
         .route("/api/stop", post(stop_server))
         .route("/api/command", post(send_command))
@@ -393,12 +398,19 @@ async fn list_servers(State(state): State<AppState>) -> Json<Vec<ServerListEntry
         let cfg = ServerConfig::load_from_dir(dir).await.ok();
         let name = cfg.as_ref().map(|c| c.name.clone()).unwrap_or_else(|| "default".to_string());
         let running = state.manager.is_running().await;
+        let stats = if running {
+            Some(state.manager.get_stats(cfg.as_ref().map(|c| c.ram_max_mb)).await)
+        } else {
+            None
+        };
         entries.push(ServerListEntry {
             name,
             path: dir.to_string_lossy().to_string(),
             running,
             mc_version: cfg.as_ref().map(|c| c.mc_version.clone()),
             loader: cfg.as_ref().map(|c| c.loader.to_string()),
+            memory_mb: stats.as_ref().map(|s| s.memory_mb),
+            cpu_percent: stats.as_ref().map(|s| s.cpu_percent),
         });
     }
 
@@ -415,12 +427,23 @@ async fn list_servers(State(state): State<AppState>) -> Json<Vec<ServerListEntry
         } else {
             false
         };
+        let stats = if running {
+            if let Some(mgr) = managers.get(&server_entry.name) {
+                Some(mgr.get_stats(cfg.as_ref().map(|c| c.ram_max_mb)).await)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         entries.push(ServerListEntry {
             name: server_entry.name.clone(),
             path: server_entry.path.to_string_lossy().to_string(),
             running,
             mc_version: cfg.as_ref().map(|c| c.mc_version.clone()),
             loader: cfg.as_ref().map(|c| c.loader.to_string()),
+            memory_mb: stats.as_ref().map(|s| s.memory_mb),
+            cpu_percent: stats.as_ref().map(|s| s.cpu_percent),
         });
     }
 
@@ -493,6 +516,19 @@ async fn get_status(
 ) -> Json<StatusResponse> {
     let manager = resolve_manager(&state, params.server.as_deref()).await;
     Json(StatusResponse { running: manager.is_running().await })
+}
+
+async fn get_stats(
+    State(state): State<AppState>,
+    Query(params): Query<ServerQuery>,
+) -> Json<crate::core::metrics::ServerStats> {
+    let manager = resolve_manager(&state, params.server.as_deref()).await;
+    let limit_mb = if let Ok(dir) = resolve_server_dir(&state, params.server.as_deref()).await {
+        ServerConfig::load_from_dir(&dir).await.ok().map(|c| c.ram_max_mb)
+    } else {
+        None
+    };
+    Json(manager.get_stats(limit_mb).await)
 }
 
 async fn start_server(

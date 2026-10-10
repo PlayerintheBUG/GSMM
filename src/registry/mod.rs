@@ -82,6 +82,7 @@ impl Registry {
     }
 
     /// Cerca un server per percorso (confronta il percorso canonico).
+    #[allow(dead_code)]
     pub fn find_by_path(&self, path: &Path) -> Option<&ServerEntry> {
         let abs = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         self.servers.iter().find(|s| s.path == abs)
