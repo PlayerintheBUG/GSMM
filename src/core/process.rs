@@ -9,10 +9,13 @@ use colored::*;
 
 use super::config::ServerConfig;
 use super::java::detect_java;
+use super::metrics::{CpuSample, ServerStats};
 
 pub struct RunningServer {
     pub child: Child,
     pub stdin: Option<ChildStdin>,
+    pub started_at: std::time::Instant,
+    pub cpu_sample: Option<CpuSample>,
 }
 
 pub struct ServerManager {
@@ -115,10 +118,57 @@ impl ServerManager {
             }
         });
 
+        let started_at = std::time::Instant::now();
         let mut lock = self.inner.lock().await;
-        *lock = Some(RunningServer { child, stdin });
+        *lock = Some(RunningServer {
+            child,
+            stdin,
+            started_at,
+            cpu_sample: None,
+        });
 
         Ok(())
+    }
+
+    pub async fn get_stats(&self, memory_limit_mb: Option<u32>) -> ServerStats {
+        let mut lock = self.inner.lock().await;
+        if let Some(server) = lock.as_mut() {
+            match server.child.try_wait() {
+                Ok(None) => {
+                    let pid = server.child.id();
+                    let uptime_seconds = server.started_at.elapsed().as_secs();
+                    let metrics = if let Some(p) = pid {
+                        crate::core::metrics::read_process_metrics(p, &mut server.cpu_sample)
+                    } else {
+                        crate::core::metrics::ProcessMetrics::default()
+                    };
+
+                    let memory_percent = memory_limit_mb.and_then(|lim| {
+                        if lim > 0 {
+                            Some(((metrics.memory_rss_mb as f32 / lim as f32) * 100.0 * 10.0).round() / 10.0)
+                        } else {
+                            None
+                        }
+                    });
+
+                    ServerStats {
+                        running: true,
+                        pid,
+                        cpu_percent: metrics.cpu_percent,
+                        memory_mb: metrics.memory_rss_mb,
+                        memory_limit_mb,
+                        memory_percent,
+                        uptime_seconds,
+                    }
+                }
+                _ => {
+                    *lock = None;
+                    ServerStats::offline(memory_limit_mb)
+                }
+            }
+        } else {
+            ServerStats::offline(memory_limit_mb)
+        }
     }
 
     pub async fn send_command(&self, cmd_text: &str) -> Result<()> {
@@ -212,7 +262,7 @@ impl ServerManager {
             }
 
             // Check if it's a GSMM command (!check, !mod add, gsmm check, etc.)
-            match crate::cli::handle_console_input(trimmed, dir).await {
+            match crate::cli::handle_console_input(trimmed, dir, Some(self)).await {
                 Ok(true) => {
                     // Handled locally by GSMM
                     continue;

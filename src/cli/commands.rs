@@ -417,7 +417,11 @@ pub async fn upgrade_server_core(
     Ok(format!("Server aggiornato con successo a Minecraft {} ({}) preservando il mondo!", config.mc_version, config.loader))
 }
 
-pub async fn handle_console_input(input: &str, server_dir: &Path) -> Result<bool> {
+pub async fn handle_console_input(
+    input: &str,
+    server_dir: &Path,
+    manager: Option<&ServerManager>,
+) -> Result<bool> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
         return Ok(false);
@@ -439,7 +443,7 @@ pub async fn handle_console_input(input: &str, server_dir: &Path) -> Result<bool
             println!("{}", "   🛠️  COMANDI GSMM DISPONIBILI NELLA CONSOLE LIVE        ".green().bold());
             println!("{}", "═══════════════════════════════════════════════════════════".cyan());
             println!("• {} o {}       - Mostra IP pubblico, LAN e stato porta", "!check".yellow(), "gsmm check".yellow());
-            println!("• {} o {}      - Mostra lo stato e le mod del server", "!status".yellow(), "gsmm status".yellow());
+            println!("• {} o {}      - Mostra utilizzo CPU, RAM e stato in tempo reale", "!status".yellow(), "gsmm status".yellow());
             println!("• {} o {}      - Crea un backup istantaneo del mondo", "!backup".yellow(), "gsmm backup".yellow());
             println!("• {} <nome>     - Cerca mod su Modrinth", "!mod search".yellow());
             println!("• {} <mod1> <mod2> - Installa mod da Modrinth nella cartella mods", "!mod add".yellow());
@@ -457,7 +461,31 @@ pub async fn handle_console_input(input: &str, server_dir: &Path) -> Result<bool
                 return Ok(true);
             }
             "status" => {
-                let _ = show_status_cli(server_dir).await;
+                if let Some(mgr) = manager {
+                    if let Ok(config) = ServerConfig::load_from_dir(server_dir).await {
+                        let stats = mgr.get_stats(Some(config.ram_max_mb)).await;
+                        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+                        println!("  📊 RISORSE SERVER IN TEMPO REALE");
+                        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+                        if let Some(pid) = stats.pid {
+                            println!("• Stato:         {} (PID: {})", "🟢 Online".green().bold(), pid);
+                        } else {
+                            println!("• Stato:         {}", "🟢 Online".green().bold());
+                        }
+                        println!("• Uptime:        {}", stats.format_uptime().yellow());
+                        println!("• Utilizzo CPU:  {}%", format!("{:.1}", stats.cpu_percent).cyan().bold());
+                        if let Some(pct) = stats.memory_percent {
+                            println!("• RAM Reale:     {} MB / {} MB ({}%)", stats.memory_mb, config.ram_max_mb, format!("{:.1}", pct).green().bold());
+                        } else {
+                            println!("• RAM Reale:     {} MB", stats.memory_mb);
+                        }
+                        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+                    } else {
+                        let _ = show_status_cli(server_dir).await;
+                    }
+                } else {
+                    let _ = show_status_cli(server_dir).await;
+                }
                 return Ok(true);
             }
             "backup" => {
